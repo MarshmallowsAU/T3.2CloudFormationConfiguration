@@ -1,0 +1,196 @@
+{
+    "AWSTemplateFormatVersion" : "2010-09-09",
+
+    "Parameters" : {
+        "Password": {
+        "NoEcho": "true",
+        "Type": "String",
+        "Description" : "New account password",
+        "MinLength": "1",
+        "MaxLength": "41",
+        "ConstraintDescription" : "the password must be between 1 and 41 characters"
+        }
+    },
+
+    "Resources" : {     
+        "DataAnalystUser" : {
+            "Type": "AWS::IAM::User",
+            "Properties" : {
+                "LoginProfile": {
+                "Password": { "Ref" : "Password" }
+                }
+            }
+        },
+
+        "SecurityEngineerUser" : {
+            "Type": "AWS::IAM::User",
+            "Properties" : {
+                "LoginProfile": {
+                "Password": { "Ref" : "Password" }
+                }
+            }
+        },
+
+        "CloudEngineerUser" : {
+            "Type": "AWS::IAM::User",
+            "Properties" : {
+                "LoginProfile": {
+                "Password": { "Ref" : "Password" }
+                }
+            }
+        },
+
+        "DataAnalystGroup" : {
+            "Type" : "AWS::IAM::Group"
+        },
+
+        "DataAnalystGroupAdd": {
+            "Type" : "AWS::IAM::UserToGroupAddition",
+            "Properties" : {
+                "GroupName" : {"Ref" : "DataAnalystGroup"},
+                "Users" : [{"Ref" : "DataAnalystUser"}]
+              }
+        },
+
+        "SecurityEngineerGroup" : {
+            "Type": "AWS::IAM::Group"
+        },
+
+        "SecurityEngineerGroupAdd": {
+            "Type" : "AWS::IAM::UserToGroupAddition",
+            "Properties" : {
+                "GroupName" : {"Ref" : "SecurityEngineerGroup"},
+                "Users" : [{"Ref" : "SecurityEngineerUser"}]
+              }
+        },
+
+        "CloudEngineerGroup" : {
+            "Type": "AWS::IAM::Group"
+        },
+
+        "CloudEngineerGroupAdd": {
+            "Type" : "AWS::IAM::UserToGroupAddition",
+            "Properties" : {
+                "GroupName" : {"Ref" : "CloudEngineerGroup"},
+                "Users" : [{"Ref" : "CloudEngineerUser"}]
+              }
+        },
+
+
+        "DataAnalystGroupPolicies" : {
+            "Type" : "AWS::IAM::Policy",
+            "Properties" : {
+                "PolicyName": "DataAnalystGroup",
+                "PolicyDocument" : {
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "s3:GetObject"
+                            ],
+                            "Resource" : [
+                                {"Fn::Join": ["", ["arn:aws:s3:::", {"Ref" : "CustomerPIIBucket"}, "/*"]]}
+                            ]
+
+                        }
+                    ]
+                },
+                "Groups" : [{"Ref" : "DataAnalystGroup"}]
+            }
+        },
+
+        "SecurityEngineerGroupPolicies" : {
+            "Type" : "AWS::IAM::Policy",
+            "Properties" : {
+                "PolicyName": "SecurityEngineerGroup",
+                "PolicyDocument" : {
+                    "Statement": [      
+                        {
+                            "Effect": "Allow",
+                            "Action" : [
+                                "s3:PutEncryptionConfiguration"
+                            ],
+                            "Resource": [
+                                {"Fn::Join": ["", ["arn:aws:s3:::", {"Ref" : "CustomerPIIBucket"}, "/*"]]}
+                            ]
+                        }, {
+                            "Effect": "Allow",
+                            "Action" : [
+                                "s3:GetEncryptionConfiguration"
+                            ],
+                            "Resource": [
+                                {"Fn::Join": ["", ["arn:aws:s3:::", {"Ref" : "CustomerPIIBucket"}, "/*"]]}
+                            ]
+                        }, {
+                            "Effect": "Allow",
+                            "Action" : [
+                                "KMS:*"
+                            ],
+                            "Resource": [
+                                {"Fn::Join": ["", ["arn:aws:s3:::", {"Ref" : "CustomerPIIBucket"}, "/*"]]}
+                            ]
+                        }
+                    ]
+                },
+                "Groups" : [{"Ref" : "SecurityEngineerGroup"}]
+            }
+        },
+
+        "CloudEngineerGroupPolicies" : {
+            "Type" : "AWS::IAM::Policy",
+            "Properties" : {
+                "PolicyName": "FinanceUsers",
+                "PolicyDocument" : {
+                    "Statement": [   
+                        {
+                            "Effect" : "Allow",
+                            "Action" : [
+                                "s3:*"
+                            ],
+                            "Resource": [
+                                {"Fn::Join": ["", ["arn:aws:s3:::", {"Ref" : "CustomerPIIBucket"}, "/*"]]}
+                            ]
+                        },
+                        {
+                            "Effect" : "Deny",
+                            "Action" : [
+                                "s3:GetObject"
+                            ],
+                            "Resource": [
+                                {"Fn::Join": ["", ["arn:aws:s3:::", {"Ref" : "CustomerPIIBucket"}, "/*"]]}
+                            ]
+                        }
+                    ]
+                },
+                "Groups" : [{"Ref" : "CloudEngineerGroup"}]
+            }
+        },
+        
+        "BucketKey": {
+            "Type" : "AWS::KMS::Key",
+            "Properties" : {
+                "Description" : "The key used to encrypt the CustomerPIIBucket",
+                "Enabled" : true,
+                "KeyPolicy" : {
+                    "Version": "2012-10-17",
+                    "Id": "CustomerPIIBucketKeyPolicy"
+                }
+            }
+        },
+        
+        "CustomerPIIBucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "LifecycleConfiguration": {
+                    "Rules": [
+                        {
+                            "Id": "DeletionRule",
+                            "Status": "Enabled",
+                            "ExpirationInDays": 7
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}
