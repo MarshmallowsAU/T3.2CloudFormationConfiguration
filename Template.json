@@ -165,19 +165,7 @@
                 "Groups" : [{"Ref" : "CloudEngineerGroup"}]
             }
         },
-        
-        "BucketKey": {
-            "Type" : "AWS::KMS::Key",
-            "Properties" : {
-                "Description" : "The key used to encrypt the CustomerPIIBucket",
-                "Enabled" : true,
-                "KeyPolicy" : {
-                    "Version": "2012-10-17",
-                    "Id": "CustomerPIIBucketKeyPolicy"
-                }
-            }
-        },
-        
+
         "CustomerPIIBucket": {
             "Type": "AWS::S3::Bucket",
             "Properties": {
